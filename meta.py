@@ -10,6 +10,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 import random as rd 
 
+def read_data(file_path):
+    liste = []
+    with open(file_path, 'r') as f:
+        data = f.readlines()
+        for line in data:
+            words = line.split()
+            liste.append((float(words[1]), float(words[2])))
+    return(np.array(liste))
+
 def write_data(distance_matrix, Rcapt, Rcom, file='data.dat'):
     """Ecrit les donnees du problemes au format .dat pour le PLNE"""
     N = distance_matrix.shape[0]
@@ -30,7 +39,7 @@ def write_data(distance_matrix, Rcapt, Rcom, file='data.dat'):
                 endcar=';'
             else:
                 endcar='\n'
-            line =  ' '.join(map(str, distance_matrix[i,:].astype(int))) + endcar
+            line =  ' '.join(map(str, distance_matrix[i,:])) + endcar
             f.write(str(i+1) + ' '+ line)
         
         
@@ -45,13 +54,14 @@ def compute_square_grid(n):
 
 def trace(coords_pts, capteurs):
     """Trace sur une grid les points en bleu et les capteurs en rouge"""
+    
     plt.plot(coords_pts[:,0]+1, coords_pts[:,1]+1, 'b.')
     plt.plot(capteurs[:,0]+1, capteurs[:,1]+1, 'r.')
+    plt.plot(coords_pts[0,0]+1, coords_pts[0,1]+1, 'g.')
     return 0
 
 
-
-if True:
+if False:
     n = 10
     num_to_select = 5
     coords_pts, _ = compute_square_grid(n)
@@ -61,8 +71,17 @@ if True:
     trace(coords_pts, capteurs)
 
 if False:
-    N = 6
-    Rcapt = 3
-    Rcom = 4
+    N = 5
+    Rcapt = 1
+    Rcom = 2
     coords_pts, dist = compute_square_grid(N)
+    write_data(distance_matrix=dist, Rcapt=Rcapt, Rcom=Rcom, file='Meta.dat')
+    
+if True:
+    N = 5
+    Rcapt = 1
+    Rcom = 2
+    file_path = 'Instances\captANOR1500_21_500.dat'
+    coords_pts = read_data(file_path)
+    dist = pairwise_distances(coords_pts)
     write_data(distance_matrix=dist, Rcapt=Rcapt, Rcom=Rcom, file='Meta.dat')

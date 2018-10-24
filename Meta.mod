@@ -11,23 +11,26 @@ minimize obj: sum{i in 1..n}(x[i]);
 subject to
 captation {i in 1..n} : sum{j in 1..n : d[i,j] <= Rcapt}(x[j]) >= 1;
 
-kirshof {i in 1..n, j in 1..n : i<>j and i<>1 and j<>1} : sum{k in 1..n}y[i,j,k] - sum{k in 1..n}y[i,k,j] = 0;
+#kirshof {i in 1..n, j in 1..n : i<>j and i<>1 and j<>1} : sum{k in 1..n}y[i,j,k] - sum{k in 1..n}y[i,k,j] = 0;
 
-source {i in 1..n : i<>1} : sum{k in 1..n}y[i,i,k] = 1;
-source2 {i in 1..n : i<>1} : sum{k in 1..n}y[i,k,i] = 0;
+#source {i in 1..n : i<>1} : sum{k in 1..n}y[i,i,k] = 1;
+#source2 {i in 1..n : i<>1} : sum{k in 1..n}y[i,k,i] = 0;
 
-puits {i in 1..n : i<>1} : sum{k in 1..n}y[i,k,1] = 1;
-puits2 {i in 1..n : i<>1} : sum{k in 1..n}y[i,1,k] = 0;
+#puits {i in 1..n : i<>1} : sum{k in 1..n}y[i,k,1] = 1;
+#puits2 {i in 1..n : i<>1} : sum{k in 1..n}y[i,1,k] = 0;
 
-activation {i in 1..n, j in 1..n, k in 1..n : i <> 1 and k<>1} : y[i,j,k] <= x[k];
+#activation {i in 1..n, j in 1..n, k in 1..n : i <> 1 and k<>1} : y[i,j,k] <= x[k];
 
-diagonulle {i in 1..n, k in 1..n} : y[i,k,k] = 0;
+#diagonulle {i in 1..n, k in 1..n} : y[i,k,k] = 0;
 
-communication1 {i in 1..n, j in 1..n, k in 1..n : d[j,k] > Rcom} : y[i,j,k] = 0;
+#communication1 {i in 1..n, j in 1..n, k in 1..n : d[j,k] > Rcom} : y[i,j,k] = 0;
+
+cond_pt_isole {i in 1..n} : sum{j in 1..n : d[i,j] <= Rcom}x[j] >=2;
 
 solve;
-display x;
-display y;
+#display x;
+display obj;
+#display y;
 data;
 
 #param n:=5;
