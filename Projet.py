@@ -433,26 +433,36 @@ def gloutonGrille(iterations, n, rcapt, rcom):
 
 
 def voisinage(k, capteurs, nodes, matCom, matCap, rcapt, rcom):
+#    print(capteurs)
     capteurs = removeK(k, capteurs)
+#    print("Removed", len(capteurs))
     capteurs = complete(capteurs, nodes, matCom, matCap, rcapt, rcom)
+#    print("Complete", len(capteurs))
     
     return capteurs
     
     
 def removeK(k, capteurs):
     if k < len(capteurs):
+#        print("Capteurs before remove", capteurs)
         toRemove = np.random.choice(capteurs, k, replace = False)
+#        print("toRemove", toRemove)
         
         for captRemov in toRemove:
-            capteurs = capteurs.remove(captRemov)
+#            print(capteurs)
+            capteurs.remove(captRemov)
+            
+#        print("Removed", capteurs)
         
     return capteurs
 
 def complete(capteurs, nodes, matCom, matCap, rcapt, rcom):
     n = nodes.shape[0]
-    print(capteurs)
+#    print(capteurs)
     
     covered = alreadyCovered(capteurs, matCap, rcapt, n)
+    
+#    print(sum(covered))
     
     while(not testFinReseau(covered)):
 
@@ -474,7 +484,10 @@ def complete(capteurs, nodes, matCom, matCap, rcapt, rcom):
             
         newCapt = random.choice(listNewCapt)
         capteurs.append(newCapt)
-        captCover(newCapt, rcapt, covered, matCap)
+        covered = captCover(newCapt, rcapt, covered, matCap)
+        
+#        print(sum(covered))
+#        print(covered)
         
     return capteurs
 
@@ -486,7 +499,7 @@ def alreadyCovered(capteurs, matCap, rcapt, n):
         
     return covered
 
-def gloutonReseau(iterations, path, rcapt, rcom):
+def gloutonReseau(iterations, path, rcom, rcapt):
     start = time.time()
     
     res = []
@@ -515,22 +528,29 @@ def matrices_adj(distance_matrix, rcom, rcapt):
     for i in range(n):
         for j in range(n):
             d = distance_matrix[i, j]
-            if(d < rcom):
+            if(d <= rcom):
                 matAdjCom[i, j] = 1
-            if(d < rcapt):
+            if(d <= rcapt):
                 matAdjCap[i, j] = 1
+                
                 
     return matAdjCom, matAdjCap
 
 def algoVoisinageGloutonReseau(path, k, p, rcom, rcapt):
+    start = time.time()
     nodes = meta.read_data(path)
     distance_matrix = pairwise_distances(nodes)
     matAdjCom, matAdjCap = matrices_adj(distance_matrix, rcom, rcapt)
     
     capteurs = algoGloutonReseau(nodes, matAdjCom, matAdjCap, rcom, rcapt)
-    print(capteurs)
+#    print(capteurs)
     
     vals = [len(capteurs)]
+    
+    minValue = nodes.shape[0]
+    
+    
+    
     
     for i in range(p):
         print(vals)
@@ -538,13 +558,60 @@ def algoVoisinageGloutonReseau(path, k, p, rcom, rcapt):
         
         vals.append(len(capteurs))
         
+        if(len(capteurs) < minValue):
+            minValue = len(capteurs)
+            minCapteurs = capteurs
+            
+            
+        
+    print(vals)
+    print(min(vals))
+    
+    end = time.time()
+    
+    print(end - start)
+    
+    print(minValue)
+    print(minCapteurs)
+        
+    trace(nodes, minCapteurs, matAdjCom, matAdjCap)
+    
+    return minCapteurs
+
+def algoVoisinageGloutonGrille(n, k, p, rcom, rcapt):
+    start = time.time()
+    grille = nodesGrille(n)
+    matAdjCom = matAdjGrille(n, rcom)
+    matAdjCap = matAdjGrille(n, rcapt)
+    
+    capteurs = algoGloutonReseau(grille, matAdjCom, matAdjCap, rcom, rcapt)
+#    print(capteurs)
+    
+    vals = [len(capteurs)]
+    
+    for i in range(p):
+#        print(vals)
+        capteurs = voisinage(k, capteurs, grille, matAdjCom, matAdjCap, rcom, rcapt)
+        
+        vals.append(len(capteurs))
+#        print("Capteurs", capteurs)
+        
+    print(vals)
+    print(min(vals))
+    
+    end = time.time()
+    
+    print(end - start)
+    
     return vals
     
     
     
-#gloutonReseau(1, "/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR1500_21_500.dat", 1, 1)
+#gloutonReseau(50, "/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 1, 1)
 
-algoVoisinageGloutonReseau("/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 5, 1, 1, 2)
+algoVoisinageGloutonReseau("/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 10, 50, 1, 1)
+
+#algoVoisinageGloutonGrille(5, 2, 3, 2, 1)
 
 
 
