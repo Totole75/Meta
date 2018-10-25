@@ -19,7 +19,7 @@ def read_data(file_path):
         for line in data:
             words = line.split()
             liste.append((float(words[1]), float(words[2])))
-    return(np.array(liste))
+    return(np.array(liste), pairwise_distances(np.array(liste)))
 
 def write_data(distance_matrix, Rcapt, Rcom, file='data.dat'):
     """Ecrit les donnees du problemes au format .dat pour le PLNE"""
@@ -53,7 +53,7 @@ def compute_square_grid(n):
     return np.array(coords_pts), pairwise_distances(coords_pts)
 
 
-def trace(coords_pts, capteurs, matAdjCom, matAdjCap):
+def trace(coords_pts, capteurs, Rcom, matAdjCap, ):
     """Trace sur une grid les points en bleu et les capteurs en rouge"""
     
     n2 = matAdjCap.shape[0]
@@ -62,13 +62,28 @@ def trace(coords_pts, capteurs, matAdjCom, matAdjCap):
         if i in capteurs:
             indexes_voisins = np.where(matAdjCap[i,:]==1)[0]
             for j in indexes_voisins:
-                X = (coords_pts[i,0]+1,coords_pts[j,0]+1)
-                Y = (coords_pts[i,1]+1,coords_pts[j,1]+1)
+                X = (coords_pts[i,0],coords_pts[j,0])
+                Y = (coords_pts[i,1],coords_pts[j,1])
                 plt.plot(X, Y, 'g-')
             
-    plt.plot(coords_pts[:,0]+1, coords_pts[:,1]+1, 'b.')
-    plt.plot(coords_pts[capteurs,0]+1, coords_pts[capteurs,1]+1, 'r.', markersize=12)
+    plt.plot(coords_pts[:,0], coords_pts[:,1], 'b.')
+    plt.plot(coords_pts[capteurs,0], coords_pts[capteurs,1], 'r.', markersize=12)
+    plt.axis('equal')
     plt.show()
+    
+    #contraintes de connexe
+    c = []
+    for i in range(len(capteurs)):
+        #plt.Circle((coords_pts[capteurs[i],0]+1, coords_pts[capteurs[i],1]+1), 10, color='b')
+        c.append(plt.Circle((coords_pts[capteurs[i],0], coords_pts[capteurs[i],1]), 1, color='b'))
+    fig, ax = plt.subplots()
+    for i in c:
+        ax.add_artist(i)
+    plt.plot(coords_pts[capteurs,0], coords_pts[capteurs,1], 'r.', markersize=12)
+    
+    plt.axis('equal')
+    plt.show()
+    
     return 0
 
 def nodesGrille(n):
