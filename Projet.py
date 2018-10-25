@@ -11,6 +11,8 @@ import heapq
 import random
 import time
 
+##### Pour la GRILLE uniquement ######
+
 def algoGlouton(n, rcapt, rcom):
     covered = np.zeros((n, n))
     nodes = []
@@ -62,7 +64,7 @@ def voisinage(k, nodes):
     
     return nodes
 
-def testFin(covered):
+def testFinGrille(covered):
     p = 1
     n = covered.shape[0]
     for i in range(n):
@@ -300,8 +302,206 @@ def testConnexite(nodes, rcom, n):
     
     
 #algoGlouton(10, 1, 2)
-#glouton(50, 20, 1, 2)
+#glouton(150, 6, 1, 2)
 #algoGloutonInv(5, 1, 2)
 #gloutonInv(5, 10, 1, 2, 0.2)
-for r in np.arange(0.05, 0.5, 0.05):
-    gloutonInv(5, 10, 1, 2, r)
+#for r in np.arange(0.05, 0.5, 0.05):
+#    gloutonInv(5, 10, 1, 2, r)
+
+
+
+
+##### Pour le RESEAU #####
+
+#On suppose que l'on a en entrée :
+#   - nodes = array la liste des points [(xi, yi)]
+#   - matCap : matrice d'adjacence des sommets pour rcapt
+#   - matCom : matrice d'adjacence des sommets pour rcom
+
+#n bord de la grille
+def nodesGrille(n):
+    nodes = np.arange(0, n**2)
+    
+    return nodes
+
+def matAdjGrille(n, rayon):
+    matAdj = np.zeros((n**2,n**2))
+    for i0 in range(n):
+        for j0 in range(n):
+            for i1 in range(i0 - rayon, i0 + rayon + 1):
+                for j1 in range(j0 - rayon, j0 + rayon + 1):
+                    if(i1 >= 0 and i1< n):
+                        if(j1 >= 0 and j1< n):
+                            if((i1 - i0)**2 + (j1 - j0)**2 <= rayon**2):
+                                matAdj[i0 + n*j0, i1 + n*j1] = 1
+    return matAdj
+            
+    
+
+def algoGloutonReseau(nodes, matCom, matCap, rcom, rcapt):
+    n = nodes.shape[0]
+    
+    covered = np.zeros(n)
+    capteurs = []
+    
+    capteurs.append(0)
+    
+    covered = captCover(0, rcapt, covered, matCap)
+    
+    while(not testFinReseau(covered)):
+
+        
+        priorq = []
+        
+        for capt in capteurs :
+            
+            for captNeighbour in range(n):
+                if(matCom[capt, captNeighbour] == 1):
+                    heapq.heappush(priorq, (- evalNewCapt(captNeighbour, rcapt, covered, matCap), captNeighbour))
+
+        listNewCapt = []
+        initval, newCapt = heapq.heappop(priorq)
+        val = initval
+        while(val == initval):
+            listNewCapt.append(newCapt)
+            val, newCapt = heapq.heappop(priorq)
+            
+        newCapt = random.choice(listNewCapt)
+        capteurs.append(newCapt)
+        captCover(newCapt, rcapt, covered, matCap)
+        
+#        print(testFinReseau(covered))
+        
+#        print(newNode)
+        
+#    visu(nodes, n)
+#    print(capteurs)
+    
+    return (len(capteurs))
+
+def captCover(capt, rcapt, covered, matCap):
+    n = covered.shape[0]
+    
+    for captNeighbour in range(n):
+        if(matCap[capt, captNeighbour] == 1):
+            covered[captNeighbour] = 1
+            
+#    print(covered)
+    return covered
+
+def testFinReseau(covered):
+    p = 1    
+    for i in covered :
+        p *= i
+        
+    if p > 0:
+        return True
+    return False
+
+def evalNewCapt(capt, rcapt, covered, matCap):
+    evaluation = 0
+    n = covered.shape[0]
+    
+    for captNeighbour in range(n):
+        if(matCap[capt, captNeighbour] == 1):
+            evaluation += 1 - covered[captNeighbour] 
+    return evaluation
+
+
+
+def gloutonGrille(iterations, n, rcapt, rcom):
+    start = time.time()
+    
+    res = []
+    grille = nodesGrille(n)
+    matAdjCom = matAdjGrille(n, rcom)
+    matAdjCap = matAdjGrille(n, rcapt)
+    for i in range(iterations):
+        res.append(algoGloutonReseau(grille, matAdjCom, matAdjCap, rcom, rcapt))
+    print(res)
+    print(min(res))
+    
+    print(sorted(res))
+    
+    end = time.time()
+    
+    print(end - start)
+    
+gloutonGrille(1, 40, 2, 3)
+
+
+def voisinage(k, capteurs, nodes, matCom, matCap, rcapt, rcom):
+    capteurs = removeK(k, capteurs)
+    capteurs = complete(capteurs, nodes, matCom, matCap, rcapt, rcom)
+    
+    return capteurs
+    
+    
+def removeK(k, capteurs):
+    if k < len(capteurs):
+        toRemove = np.random.choice(capteurs, k, replace = False)
+        
+        capteurs = capteurs.remove(toRemove)
+        
+    return capteurs
+
+def complete(capteurs, nodes, matCom, matCap, rcapt, rcom):
+    n = nodes.shape[0]
+    
+    covered = alreadyCovered(capteurs, matCap, rcapt, n)
+    
+    while(not testFinReseau(covered)):
+
+        
+        priorq = []
+        
+        for capt in capteurs :
+            
+            for captNeighbour in range(n):
+                if(matCom[capt, captNeighbour] == 1):
+                    heapq.heappush(priorq, (- evalNewCapt(captNeighbour, rcapt, covered, matCap), captNeighbour))
+
+        listNewCapt = []
+        initval, newCapt = heapq.heappop(priorq)
+        val = initval
+        while(val == initval):
+            listNewCapt.append(newCapt)
+            val, newCapt = heapq.heappop(priorq)
+            
+        newCapt = random.choice(listNewCapt)
+        capteurs.append(newCapt)
+        captCover(newCapt, rcapt, covered, matCap)
+        
+    return capteurs
+
+def alreadyCovered(capteurs, matCap, rcapt, n):
+    covered = np.zeros(n)
+    
+    for capt in capteurs :
+        covered = captCover(capt, rcapt, covered, matCap)
+        
+    return covered
+
+def gloutonReseau(iterations, nodes, rcapt, rcom):
+    start = time.time()
+    
+    res = []
+    grille = nodesGrille(nodes)
+    matAdjCom = matAdjGrille(nodes, rcom)
+    matAdjCap = matAdjGrille(nodes, rcapt)
+    for i in range(iterations):
+        res.append(algoGloutonReseau(grille, matAdjCom, matAdjCap, rcom, rcapt))
+    print(res)
+    print(min(res))
+    
+    print(sorted(res))
+    
+    end = time.time()
+    
+    print(end - start)
+
+
+
+
+    
+
