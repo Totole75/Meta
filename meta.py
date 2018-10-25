@@ -8,7 +8,8 @@ Created on Mon Oct 22 23:31:13 2018
 from sklearn.metrics.pairwise import pairwise_distances
 import matplotlib.pyplot as plt
 import numpy as np
-import random as rd 
+import random as rd
+import projet
 
 def read_data(file_path):
     liste = []
@@ -51,24 +52,42 @@ def compute_square_grid(n):
     return np.array(coords_pts), pairwise_distances(coords_pts)
 
 
-
-def trace(coords_pts, capteurs):
+def trace(coords_pts, capteurs, matAdjCom, matAdjCap):
     """Trace sur une grid les points en bleu et les capteurs en rouge"""
     
+    n2 = matAdjCap.shape[0]
+    
+    for i in range(n2):
+        if i in capteurs:
+            indexes_voisins = np.where(matAdjCap[i,:]==1)[0]
+            for j in indexes_voisins:
+                X = (coords_pts[i,0]+1,coords_pts[j,0]+1)
+                Y = (coords_pts[i,1]+1,coords_pts[j,1]+1)
+                plt.plot(X, Y, 'g-')
+            
     plt.plot(coords_pts[:,0]+1, coords_pts[:,1]+1, 'b.')
-    plt.plot(capteurs[:,0]+1, capteurs[:,1]+1, 'r.')
-    plt.plot(coords_pts[0,0]+1, coords_pts[0,1]+1, 'g.')
+    plt.plot(coords_pts[capteurs,0]+1, coords_pts[capteurs,1]+1, 'r.', markersize=12)
+    plt.show()
     return 0
 
-
 if False:
-    n = 10
+    file_path = 'Instances\captANOR1500_21_500.dat'
+    coords_pts = read_data(file_path)
+    trace(coords_pts, [])
+    
+if True:
+    n = 5
+    Rcom = 2
+    Rcapt = 1
     num_to_select = 5
-    coords_pts, _ = compute_square_grid(n)
+    coords_pts, distance_matrix = compute_square_grid(n)
+    
+    #calcul des matrices d'adjacence
+    matAdjCom, matAdjCap = matrices_adj(distance_matrix, Rcom, Rcapt)
     
     #generation aleatoire de capteurs
-    capteurs = np.array(rd.sample(compute_square_grid(n)[0].tolist(), num_to_select))
-    trace(coords_pts, capteurs)
+    capteurs = np.array(rd.sample(range(n*n), num_to_select))
+    trace(coords_pts, capteurs, matAdjCom, matAdjCap)
 
 if False:
     N = 5
@@ -77,10 +96,10 @@ if False:
     coords_pts, dist = compute_square_grid(N)
     write_data(distance_matrix=dist, Rcapt=Rcapt, Rcom=Rcom, file='Meta.dat')
     
-if True:
+if False:
     N = 5
     Rcapt = 1
-    Rcom = 2
+    Rcom = 1
     file_path = 'Instances\captANOR1500_21_500.dat'
     coords_pts = read_data(file_path)
     dist = pairwise_distances(coords_pts)
