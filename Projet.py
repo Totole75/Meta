@@ -10,6 +10,8 @@ import numpy as np
 import heapq
 import random
 import time
+from sklearn.metrics.pairwise import pairwise_distances
+import meta
 
 ##### Pour la GRILLE uniquement ######
 
@@ -377,7 +379,7 @@ def algoGloutonReseau(nodes, matCom, matCap, rcom, rcapt):
 #    visu(nodes, n)
 #    print(capteurs)
     
-    return (len(capteurs))
+    return (capteurs)
 
 def captCover(capt, rcapt, covered, matCap):
     n = covered.shape[0]
@@ -417,7 +419,7 @@ def gloutonGrille(iterations, n, rcapt, rcom):
     matAdjCom = matAdjGrille(n, rcom)
     matAdjCap = matAdjGrille(n, rcapt)
     for i in range(iterations):
-        res.append(algoGloutonReseau(grille, matAdjCom, matAdjCap, rcom, rcapt))
+        res.append(len(algoGloutonReseau(grille, matAdjCom, matAdjCap, rcom, rcapt)))
     print(res)
     print(min(res))
     
@@ -427,7 +429,7 @@ def gloutonGrille(iterations, n, rcapt, rcom):
     
     print(end - start)
     
-gloutonGrille(1, 40, 2, 3)
+#gloutonGrille(1, 40, 2, 3)
 
 
 def voisinage(k, capteurs, nodes, matCom, matCap, rcapt, rcom):
@@ -441,12 +443,14 @@ def removeK(k, capteurs):
     if k < len(capteurs):
         toRemove = np.random.choice(capteurs, k, replace = False)
         
-        capteurs = capteurs.remove(toRemove)
+        for captRemov in toRemove:
+            capteurs = capteurs.remove(captRemov)
         
     return capteurs
 
 def complete(capteurs, nodes, matCom, matCap, rcapt, rcom):
     n = nodes.shape[0]
+    print(capteurs)
     
     covered = alreadyCovered(capteurs, matCap, rcapt, n)
     
@@ -482,15 +486,15 @@ def alreadyCovered(capteurs, matCap, rcapt, n):
         
     return covered
 
-def gloutonReseau(iterations, nodes, rcapt, rcom):
+def gloutonReseau(iterations, path, rcapt, rcom):
     start = time.time()
     
     res = []
-    grille = nodesGrille(nodes)
-    matAdjCom = matAdjGrille(nodes, rcom)
-    matAdjCap = matAdjGrille(nodes, rcapt)
+    nodes = meta.read_data(path)
+    distance_matrix = pairwise_distances(nodes)
+    matAdjCom, matAdjCap = matrices_adj(distance_matrix, rcom, rcapt)
     for i in range(iterations):
-        res.append(algoGloutonReseau(grille, matAdjCom, matAdjCap, rcom, rcapt))
+        res.append(len(algoGloutonReseau(nodes, matAdjCom, matAdjCap, rcom, rcapt)))
     print(res)
     print(min(res))
     
@@ -499,6 +503,48 @@ def gloutonReseau(iterations, nodes, rcapt, rcom):
     end = time.time()
     
     print(end - start)
+    
+    
+def matrices_adj(distance_matrix, rcom, rcapt):
+    n = distance_matrix.shape[0]
+    
+    matAdjCom = np.zeros((n, n))
+    
+    matAdjCap = np.zeros((n, n))
+    
+    for i in range(n):
+        for j in range(n):
+            d = distance_matrix[i, j]
+            if(d < rcom):
+                matAdjCom[i, j] = 1
+            if(d < rcapt):
+                matAdjCap[i, j] = 1
+                
+    return matAdjCom, matAdjCap
+
+def algoVoisinageGloutonReseau(path, k, p, rcom, rcapt):
+    nodes = meta.read_data(path)
+    distance_matrix = pairwise_distances(nodes)
+    matAdjCom, matAdjCap = matrices_adj(distance_matrix, rcom, rcapt)
+    
+    capteurs = algoGloutonReseau(nodes, matAdjCom, matAdjCap, rcom, rcapt)
+    print(capteurs)
+    
+    vals = [len(capteurs)]
+    
+    for i in range(p):
+        print(vals)
+        capteurs = voisinage(k, capteurs, nodes, matAdjCom, matAdjCap, rcom, rcapt)
+        
+        vals.append(len(capteurs))
+        
+    return vals
+    
+    
+    
+#gloutonReseau(1, "/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR1500_21_500.dat", 1, 1)
+
+algoVoisinageGloutonReseau("/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 5, 1, 1, 2)
 
 
 
