@@ -12,6 +12,8 @@ import random
 import time
 from sklearn.metrics.pairwise import pairwise_distances
 import meta
+import tool_box
+import copy
 
 ##### Pour la GRILLE uniquement ######
 
@@ -56,15 +58,6 @@ def algoGlouton(n, rcapt, rcom):
 #    print(len(nodes))
     
     return (len(nodes), linksNumber(nodes, rcapt, n))
-
-
-    
-    
-def voisinage(k, nodes):
-    nodes = remove(k, nodes)
-    nodes = complete(nodes)
-    
-    return nodes
 
 def testFinGrille(covered):
     p = 1
@@ -260,47 +253,9 @@ def gloutonInv(iterations, n, rcapt, rcom, alpha):
     
     print(end - start)
             
+
         
-    
-def canBeRemoved(node, nodesMat, rcapt, rcom):
-    nodesMat[node]=0
-    n = nodesMat.shape[0]
-    nodeNeighbours = comNeighbours(node, rcapt, n)
-#            print(nodeNeighbours)
-    testCov = 1
-    for nodeNeighbour in nodeNeighbours :
-        cov = 0
-        nodeNeighOfNeighs = comNeighbours(nodeNeighbour, rcapt, n)
-        for nodeNeighOfNeigh in nodeNeighOfNeighs :
-            cov += nodesMat[nodeNeighOfNeigh]
-        testCov *= cov
-                    
-    nodes = []
-    for i in range(n):
-        for j in range(n):
-            if(nodesMat[i, j] == 1):
-                nodes.append((i, j))
-            
-    nodesMat[node]=1
-    if testCov > 0 and testConnexite(nodes, rcom, n):
-        return True
-    return False
-        
-def testConnexite(nodes, rcom, n):
-    colored = [0]*len(nodes)
-    
-    colored[0] = 1
-    toExplore = [0]
-    while(len(toExplore) > 0):
-        nodeIndex = toExplore.pop()
-        for indexCaptNeighbour in indexCaptNeighbours(nodeIndex, rcom, n ,nodes):
-            if(colored[indexCaptNeighbour] == 0):
-                colored[indexCaptNeighbour] = 1
-                toExplore.append(indexCaptNeighbour)
-    for b in colored :
-        if b == 0:
-            return False
-    return True
+
     
     
 #algoGlouton(10, 1, 2)
@@ -348,7 +303,7 @@ def algoGloutonReseau(nodes, matCom, matCap, rcom, rcapt):
     
     capteurs.append(0)
     
-    covered = captCover(0, rcapt, covered, matCap)
+    covered = captCover(0, covered, matCap)
     
     while(not testFinReseau(covered)):
 
@@ -370,7 +325,7 @@ def algoGloutonReseau(nodes, matCom, matCap, rcom, rcapt):
             
         newCapt = random.choice(listNewCapt)
         capteurs.append(newCapt)
-        captCover(newCapt, rcapt, covered, matCap)
+        captCover(newCapt, covered, matCap)
         
 #        print(testFinReseau(covered))
         
@@ -379,9 +334,9 @@ def algoGloutonReseau(nodes, matCom, matCap, rcom, rcapt):
 #    visu(nodes, n)
 #    print(capteurs)
     
-    return (capteurs)
+    return capteurs
 
-def captCover(capt, rcapt, covered, matCap):
+def captCover(capt, covered, matCap):
     n = covered.shape[0]
     
     for captNeighbour in range(n):
@@ -411,7 +366,7 @@ def evalNewCapt(capt, rcapt, covered, matCap):
 
 
 
-def gloutonGrille(iterations, n, rcapt, rcom):
+def gloutonGrille(iterations, n, rcom, rcapt):
     start = time.time()
     
     res = []
@@ -432,14 +387,83 @@ def gloutonGrille(iterations, n, rcapt, rcom):
 #gloutonGrille(1, 40, 2, 3)
 
 
-def voisinage(k, capteurs, nodes, matCom, matCap, rcapt, rcom):
+def voisinagePasConnexe(k, capteurs, nodes, matCom, matCap, rcom, rcapt):
 #    print(capteurs)
     capteurs = removeK(k, capteurs)
 #    print("Removed", len(capteurs))
-    capteurs = complete(capteurs, nodes, matCom, matCap, rcapt, rcom)
+    capteurs = complete(capteurs, nodes, matCom, matCap, rcom, rcapt)
 #    print("Complete", len(capteurs))
     
     return capteurs
+
+
+def voisinageConnexe(k, capteurs, nodes, matCom, matCap):
+#    print(capteurs)
+    capteurs = addK(k, capteurs, nodes.shape[0])
+#    print("Removed", len(capteurs))
+
+    tool_box.trace(nodes, capteurs, matCom, matCap)
+
+    capteurs = removeConnexe(capteurs, nodes, matCom, matCap)
+#    print("Complete", len(capteurs))
+    
+    return capteurs
+
+
+def addK(k, capteurs, n):
+    cpt = 0
+    while(cpt < k):
+        newCapt = np.random.randint(0, n - 1)
+#        print("Capteur", newCapt)
+        
+        if not (newCapt in capteurs) :
+            capteurs.append(newCapt)
+            cpt += 1
+    
+    return capteurs
+
+def removeConnexe(capteurs, nodes, matCom, matCap):
+    while True:
+        toRemove = []
+        capteursBis = copy.deepcopy(capteurs)
+        for capt in capteurs:
+            capteursBis.remove(capt)
+#            print("Taillle capteurs", len(capteurs))
+#            print("Taillle capteursBis", len(capteursBis))
+#            print("Taillle toRemove", len(toRemove))
+            if canBeRemoved(capt, capteursBis, matCom, matCap, nodes.shape[0]):
+                toRemove.append(capt)
+            capteursBis.append(capt)
+
+        if(len(toRemove) > 0):
+            capteurs.remove(np.random.choice(toRemove))
+            
+        else:
+            break
+    return capteurs
+        
+        
+        
+def canBeRemoved(capt, capteurs, matCom, matCap, n):
+    if not testConnexite(capteurs, matCom):
+        return False
+    
+    testCov = 1
+    for nodeNeighbour in range(n) :
+        
+        if(matCap[nodeNeighbour, capt] == 1):
+            cov = 0
+            for captNeighofNeigh in range(n):
+                if(matCap[nodeNeighbour, captNeighofNeigh] == 1):
+                    if captNeighofNeigh in capteurs :
+                        cov += 1
+
+            testCov *= cov
+                    
+    
+    if testCov > 0 :
+        return True
+    return False
     
     
 def removeK(k, capteurs):
@@ -456,7 +480,7 @@ def removeK(k, capteurs):
         
     return capteurs
 
-def complete(capteurs, nodes, matCom, matCap, rcapt, rcom):
+def complete(capteurs, nodes, matCom, matCap, rcom, rcapt):
     n = nodes.shape[0]
 #    print(capteurs)
     
@@ -491,11 +515,11 @@ def complete(capteurs, nodes, matCom, matCap, rcapt, rcom):
         
     return capteurs
 
-def alreadyCovered(capteurs, matCap, rcapt, n):
+def alreadyCovered(capteurs, matCap, n):
     covered = np.zeros(n)
     
     for capt in capteurs :
-        covered = captCover(capt, rcapt, covered, matCap)
+        covered = captCover(capt, covered, matCap)
         
     return covered
 
@@ -550,22 +574,20 @@ def algoVoisinageGloutonReseau(path, k, p, rcom, rcapt):
     minValue = nodes.shape[0]
     
     
-    
+    minCapteurs = capteurs
     
     for i in range(p):
         print(vals)
-        capteurs = voisinage(k, capteurs, nodes, matAdjCom, matAdjCap, rcom, rcapt)
+        capteurs = voisinageConnexe(k, capteurs, nodes, matAdjCom, matAdjCap)
         
         vals.append(len(capteurs))
         
         if(len(capteurs) < minValue):
+            
             minValue = len(capteurs)
-            minCapteurs = capteurs
-            
-            
-        
+            minCapteurs = copy.deepcopy(capteurs)
+
     print(vals)
-    print(min(vals))
     
     end = time.time()
     
@@ -573,8 +595,9 @@ def algoVoisinageGloutonReseau(path, k, p, rcom, rcapt):
     
     print(minValue)
     print(minCapteurs)
+    print(len(minCapteurs))
         
-    trace(nodes, minCapteurs, matAdjCom, matAdjCap)
+    tool_box.trace(nodes, minCapteurs, matAdjCom, matAdjCap)
     
     return minCapteurs
 
@@ -584,14 +607,14 @@ def algoVoisinageGloutonGrille(n, k, p, rcom, rcapt):
     matAdjCom = matAdjGrille(n, rcom)
     matAdjCap = matAdjGrille(n, rcapt)
     
-    capteurs = algoGloutonReseau(grille, matAdjCom, matAdjCap, rcom, rcapt)
+    capteurs, covered = algoGloutonReseau(grille, matAdjCom, matAdjCap, rcom, rcapt)
 #    print(capteurs)
     
     vals = [len(capteurs)]
     
     for i in range(p):
 #        print(vals)
-        capteurs = voisinage(k, capteurs, grille, matAdjCom, matAdjCap, rcom, rcapt)
+        capteurs = voisinageConnexe(k, capteurs, grille, matAdjCom, matAdjCap)
         
         vals.append(len(capteurs))
 #        print("Capteurs", capteurs)
@@ -605,11 +628,29 @@ def algoVoisinageGloutonGrille(n, k, p, rcom, rcapt):
     
     return vals
     
+
+def testConnexite(capteurs, matCom):
+    colored = [0]*len(capteurs)
+    
+    colored[0] = 1
+    toExplore = [capteurs[0]]
+    while(len(toExplore) > 0):
+        node = toExplore.pop()
+        for nodeNeighIndex in range(len(capteurs)):
+            nodeNeigh = capteurs[nodeNeighIndex]
+            if(matCom[node, nodeNeigh] == 1 and not nodeNeigh == node):
+                if(colored[nodeNeighIndex] == 0):
+                    colored[nodeNeighIndex] = 1
+                    toExplore.append(nodeNeigh)
+    for b in colored :
+        if b == 0:
+            return False
+    return True
     
     
 #gloutonReseau(50, "/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 1, 1)
 
-algoVoisinageGloutonReseau("/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 10, 50, 1, 1)
+algoVoisinageGloutonReseau("/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 5, 10, 2, 1)
 
 #algoVoisinageGloutonGrille(5, 2, 3, 2, 1)
 
