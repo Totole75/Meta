@@ -8,14 +8,14 @@ Created on Thu Oct 25 09:08:45 2018
 import numpy as np
 import random as rd
 import tool_box
-import tqdm
+import time
 
 def generation_voisin(grille):
     return(grille)
     
 def generation_sol_initiale(input_reseau, Rcom, Rcapt):
     ## Parameters
-    iteration_nb = 30
+    tp_lim_sec = 1*60 #en secondes
     
     if type(input_reseau) == int:
         #alors on veut une grille
@@ -26,11 +26,17 @@ def generation_sol_initiale(input_reseau, Rcom, Rcapt):
     matAdjCom, matAdjCap = tool_box.matrices_adj(mat_dist, Rcom, Rcapt)
     capteurs_init = []
     taille = []
-    for i in tqdm.tqdm(range(iteration_nb)):
+    timeout = time.time() + tp_lim_sec
+    
+    count = 0
+    while True:
         capteurs_iteration = tool_box.algoGloutonReseau(coords_pts, matAdjCom, matAdjCap, Rcom, Rcapt)
         capteurs_init.append(capteurs_iteration)
         taille.append(len(capteurs_iteration))
-    
+        if time.time() > timeout:
+            break
+        count += 1
+    print("Heuristique initiale : " + str(count) + " iterations.")
     
     capteurs_choisis = capteurs_init[np.argmin(taille)]
     return(coords_pts, mat_dist, matAdjCom, matAdjCap, capteurs_choisis)
@@ -58,7 +64,7 @@ def recuit_simule(input_reseau, Rcom, Rcapt):
     
     coords_pts, mat_dist, matAdjCom, matAdjCap, capteurs_choisis = generation_sol_initiale(input_reseau, Rcom, Rcapt)
     tool_box.trace(coords_pts, capteurs_choisis, Rcom, matAdjCap)
-    
+
     """
     
     energie_courante = energy(sol_courante, matAdjCom, matAdjCap, poids_com)
