@@ -9,7 +9,9 @@ import random as rd
 import numpy as np
 import tool_box
 import os
-
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import minimum_spanning_tree
+    
 def read_sol(sol_path):
     with open(sol_path, 'r') as f:
         data = f.readlines()
@@ -68,38 +70,25 @@ if False:
     coords_pts, dist = tool_box.read_data(file_path)
     tool_box.write_data(distance_matrix=dist, Rcapt=Rcapt, Rcom=Rcom, file='Meta.dat')
     
-if True:
-    from scipy.sparse import csr_matrix
-    from scipy.sparse.csgraph import minimum_spanning_tree
-    
-    N = 5
-    Rcapt = 1
-    Rcom = 1.5
-    coords_pts, dist = tool_box.compute_square_grid(N)
-    n = coords_pts.shape[0]
-    num_to_select = 10
-    capteurs = np.array(rd.sample(range(n), num_to_select))
-    
-    matAdjCom, matAdjCap = tool_box.matrices_adj(dist, Rcom, Rcapt)
-    def matrice_csr(distance_matrix, rcom):
-        n = distance_matrix.shape[0]
-        
-        matAdjCom = np.zeros((n, n))
-        
-        for i in range(n):
-            for j in range(i+1,n):
-                d = distance_matrix[i, j]
-                if(d <= rcom):
-                    matAdjCom[i, j] = d 
-                else:
-                    matAdjCom[i, j] = 100 + d
-                    
-        return matAdjCom
-  
-    matCsr = csr_matrix(matrice_csr(dist[capteurs,:][:,capteurs], Rcom))
 
-    Tcsr = minimum_spanning_tree(matCsr).toarray().astype(int)
+def matrice_csr(distance_matrix, rcom):
+    n = distance_matrix.shape[0]
     
+    matAdjCom_seuil = np.zeros((n, n))
+    
+    for i in range(n):
+        for j in range(i+1,n):
+            d = distance_matrix[i, j]
+            if(d <= rcom):
+                matAdjCom_seuil[i, j] = d 
+            else:
+                matAdjCom_seuil[i, j] = 100 + d
+                
+    return matAdjCom_seuil
+    
+def reconstruction(coords_pts, dist, capteurs, matAdjCom):
+    matCsr = csr_matrix(matrice_csr(dist[capteurs,:][:,capteurs], Rcom))
+    Tcsr = minimum_spanning_tree(matCsr).toarray().astype(int)
     Tcsr_compl = Tcsr + Tcsr.transpose()
     
     X, Y = np.where(Tcsr > 100)
@@ -144,6 +133,24 @@ if True:
     Tcsr_compl = Tcsr + Tcsr.transpose()
     
     tool_box.trace(coords_pts[capteurs_fixed,:], range(len(capteurs_fixed)), Rcom, Tcsr)
+    
+if True:
+    
+    
+    N = 5
+    Rcapt = 1
+    Rcom = 1
+    coords_pts, dist = tool_box.compute_square_grid(N)
+    n = coords_pts.shape[0]
+    num_to_select = 10
+    capteurs = np.array(rd.sample(range(n), num_to_select))
+    
+    matAdjCom, matAdjCap = tool_box.matrices_adj(dist, Rcom, Rcapt)
+  
+    reconstruction(coords_pts, dist, capteurs, matAdjCom)
+    
+    
+    
         
 if False:
     Rcapt = 2
