@@ -277,7 +277,10 @@ def gloutonInv(iterations, n, rcapt, rcom, alpha):
 
 #n bord de la grille
 def nodesGrille(n):
-    nodes = np.arange(0, n**2)
+    nodes = np.zeros((n**2, 2))
+    for i in range(n):
+        for j in range(n):
+            nodes[i + n*j]= (i, j)
     
     return nodes
 
@@ -295,15 +298,21 @@ def matAdjGrille(n, rayon):
             
     
 
-def algoGloutonReseau(nodes, matCom, matCap, rcom, rcapt):
+def algoGloutonReseau(nodes, matCom, matCap, capteurs_init = []):
     n = nodes.shape[0]
     
+    
+    capteurs = copy.copy(capteurs_init)
+    
     covered = np.zeros(n)
-    capteurs = []
     
-    capteurs.append(0)
+    if len(capteurs) > 0:
+        covered = alreadyCovered(capteurs, matCap, n)
     
-    covered = captCover(0, covered, matCap)
+    if not 0 in capteurs :
+        capteurs.append(0)
+        
+        covered = captCover(0, covered, matCap)
     
     while(not testFinReseau(covered)):
 
@@ -314,7 +323,7 @@ def algoGloutonReseau(nodes, matCom, matCap, rcom, rcapt):
             
             for captNeighbour in range(n):
                 if(matCom[capt, captNeighbour] == 1):
-                    heapq.heappush(priorq, (- evalNewCapt(captNeighbour, rcapt, covered, matCap), captNeighbour))
+                    heapq.heappush(priorq, (- evalNewCapt(captNeighbour, covered, matCap), captNeighbour))
 
         listNewCapt = []
         initval, newCapt = heapq.heappop(priorq)
@@ -355,7 +364,7 @@ def testFinReseau(covered):
         return True
     return False
 
-def evalNewCapt(capt, rcapt, covered, matCap):
+def evalNewCapt(capt, covered, matCap):
     evaluation = 0
     n = covered.shape[0]
     
@@ -374,7 +383,7 @@ def gloutonGrille(iterations, n, rcom, rcapt):
     matAdjCom = matAdjGrille(n, rcom)
     matAdjCap = matAdjGrille(n, rcapt)
     for i in range(iterations):
-        res.append(len(algoGloutonReseau(grille, matAdjCom, matAdjCap, rcom, rcapt)))
+        res.append(len(algoGloutonReseau(grille, matAdjCom, matAdjCap)))
     print(res)
     print(min(res))
     
@@ -387,16 +396,30 @@ def gloutonGrille(iterations, n, rcom, rcapt):
 #gloutonGrille(1, 40, 2, 3)
 
 
-def voisinagePasConnexe(k, capteurs, nodes, matCom, matCap, rcom, rcapt):
+def voisinagePasConnexe(k, capteurs, coord_nodes, matCom, matCap, matDist, rcom):
 #    print(capteurs)
     capteurs = removeK(k, capteurs)
 #    print("Removed", len(capteurs))
-    capteurs = complete(capteurs, nodes, matCom, matCap, rcom, rcapt)
+    capteurs = algoGloutonReseau(coord_nodes, matCom, matCap, capteurs)
+
+    capteurs = meta.reconstruction(coord_nodes, matDist, capteurs, matCom, rcom)
 #    print("Complete", len(capteurs))
+
+    capteurs = removeConnexe(capteurs, coord_nodes, matCom, matCap)
     
     return capteurs
 
+def removeK(k, capteurs):
+    if k < len(capteurs):
+        toRemove = np.random.choice(capteurs, k, replace = False)
+        
+        for captRemov in toRemove:
+            capteurs.remove(captRemov)
+            
+        
+    return capteurs
 
+    
 def voisinageConnexe(k, capteurs, nodes, matCom, matCap):
 #    print(capteurs)
     capteurs = addK(k, capteurs, nodes.shape[0])
@@ -466,19 +489,7 @@ def canBeRemoved(capt, capteurs, matCom, matCap, n):
     return False
     
     
-def removeK(k, capteurs):
-    if k < len(capteurs):
-#        print("Capteurs before remove", capteurs)
-        toRemove = np.random.choice(capteurs, k, replace = False)
-#        print("toRemove", toRemove)
-        
-        for captRemov in toRemove:
-#            print(capteurs)
-            capteurs.remove(captRemov)
-            
-#        print("Removed", capteurs)
-        
-    return capteurs
+
 
 def complete(capteurs, nodes, matCom, matCap, rcom, rcapt):
     n = nodes.shape[0]
@@ -560,6 +571,46 @@ def matrices_adj(distance_matrix, rcom, rcapt):
                 
     return matAdjCom, matAdjCap
 
+def algoVoisinageGloutonReseauPasConnexe(path, k, p, rcom, rcapt):
+    start = time.time()
+    nodes, distance_matrix = tool_box.read_data(path)
+    matAdjCom, matAdjCap = matrices_adj(distance_matrix, rcom, rcapt)
+    
+    capteurs = algoGloutonReseau(nodes, matAdjCom, matAdjCap)
+#    print(capteurs)
+    
+    vals = [len(capteurs)]
+    
+    minValue = nodes.shape[0]
+    
+    
+    minCapteurs = capteurs
+    
+    for i in range(p):
+        print(vals)
+        capteurs = voisinagePasConnexe(k, capteurs, nodes, matAdjCom, matAdjCap, distance_matrix, rcom)
+        
+        vals.append(len(capteurs))
+        
+        if(len(capteurs) < minValue):
+            
+            minValue = len(capteurs)
+            minCapteurs = copy.deepcopy(capteurs)
+
+    print(vals)
+    
+    end = time.time()
+    
+    print(end - start)
+    
+    print(minValue)
+    print(minCapteurs)
+    print(len(minCapteurs))
+        
+    tool_box.trace(nodes, minCapteurs, rcom, matAdjCap)
+    
+    return minCapteurs
+
 def algoVoisinageGloutonReseau(path, k, p, rcom, rcapt):
     start = time.time()
     nodes = meta.read_data(path)
@@ -628,6 +679,44 @@ def algoVoisinageGloutonGrille(n, k, p, rcom, rcapt):
     
     return vals
     
+def algoVoisinageGloutonGrillePasConnexe(n, k, p, rcom, rcapt):
+    start = time.time()
+    grille = nodesGrille(n)
+    distance_matrix = pairwise_distances(grille)
+    matAdjCom = matAdjGrille(n, rcom)
+    matAdjCap = matAdjGrille(n, rcapt)
+    
+    capteurs = algoGloutonReseau(grille, matAdjCom, matAdjCap)
+#    print(capteurs)
+
+    minValue = n**2
+    
+    minCapteurs = capteurs
+    
+    vals = [len(capteurs)]
+    
+    for i in range(p):
+#        print(vals)
+        capteurs = voisinagePasConnexe(k, capteurs, grille, matAdjCom, matAdjCap, distance_matrix, rcom)
+        
+        vals.append(len(capteurs))
+#        print("Capteurs", capteurs)
+
+        if(len(capteurs) < minValue):
+            
+            minValue = len(capteurs)
+            minCapteurs = copy.deepcopy(capteurs)
+        
+    print(vals)
+    print(min(vals))
+    
+    end = time.time()
+    
+    print(end - start)
+    
+    tool_box.trace(grille, minCapteurs, rcom, matAdjCap)
+    
+    return vals
 
 def testConnexite(capteurs, matCom):
     colored = [0]*len(capteurs)
@@ -646,11 +735,14 @@ def testConnexite(capteurs, matCom):
         if b == 0:
             return False
     return True
+
+
+#algoVoisinageGloutonGrillePasConnexe(10, 20, 100, 1, 1)
     
     
 #gloutonReseau(50, "/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 1, 1)
 
-algoVoisinageGloutonReseau("/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 5, 10, 2, 1)
+algoVoisinageGloutonReseauPasConnexe("/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 10, 50, 2, 3)
 
 #algoVoisinageGloutonGrille(5, 2, 3, 2, 1)
 
