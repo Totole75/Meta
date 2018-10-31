@@ -94,7 +94,7 @@ def reconstruction(coords_pts, dist, capteurs, matAdjCom):
     X, Y = np.where(Tcsr > 100)
     
     capteurs_fixed = capteurs.tolist()
-    
+
     for i in range(len(X)):
         X0 = capteurs[X[i]]
         Y0 = capteurs[Y[i]]
@@ -111,7 +111,8 @@ def reconstruction(coords_pts, dist, capteurs, matAdjCom):
             commonalities = set(indexes_X) - (set(indexes_X) - set(indexes_Y))
             if len(commonalities) != 0:
                 if len(new_capteurs) != 0:
-                    capteurs_fixed.append(new_capteurs)
+                    for i in new_capteurs:
+                        capteurs_fixed.append(i)
                 capteurs_fixed.append(commonalities.pop())
                 connexite = True
                 break
@@ -127,7 +128,6 @@ def reconstruction(coords_pts, dist, capteurs, matAdjCom):
     tool_box.trace(coords_pts[capteurs,:], range(len(capteurs)), Rcom, Tcsr)
     
     matCsr = csr_matrix(matrice_csr(dist[capteurs_fixed,:][:,capteurs_fixed], Rcom))
-
     Tcsr = minimum_spanning_tree(matCsr).toarray().astype(int)
     
     Tcsr_compl = Tcsr + Tcsr.transpose()
@@ -137,12 +137,16 @@ def reconstruction(coords_pts, dist, capteurs, matAdjCom):
 if True:
     
     
-    N = 5
+    N = 10
     Rcapt = 1
     Rcom = 1
+    #file_path = 'Instances\captANOR225_9_20.dat'
+
+    #coords_pts, dist = tool_box.read_data(file_path)
+
     coords_pts, dist = tool_box.compute_square_grid(N)
     n = coords_pts.shape[0]
-    num_to_select = 10
+    num_to_select = int(n/4)
     capteurs = np.array(rd.sample(range(n), num_to_select))
     
     matAdjCom, matAdjCap = tool_box.matrices_adj(dist, Rcom, Rcapt)
