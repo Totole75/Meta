@@ -9,9 +9,19 @@ import numpy as np
 import random as rd
 import tool_box
 import time
+import projet
+import meta
 
-def generation_voisin(grille):
-    return(grille)
+def generation_voisin(coords_pts, mat_dist, matAdjCom, matAdjCap, capteurs, Rcom, Rcapt, k):
+    capteurs_voisin = projet.removeK(k, capteurs)
+    
+    capteurs_voisin = projet.algoGloutonReseau(coords_pts, matAdjCom, matAdjCap, capteurs_voisin)
+
+    capteurs_connexe = meta.reconstruction(coords_pts, mat_dist, capteurs_voisin, matAdjCom, Rcom)
+    
+    capteurs_connexe = projet.removeConnexe(capteurs_connexe, coords_pts, matAdjCom, matAdjCap)
+    
+    return(capteurs_voisin, capteurs_connexe)
     
 def generation_sol_initiale(input_reseau, Rcom, Rcapt):
     ## Parameters
@@ -45,12 +55,12 @@ def temperature(k, param_temperature, T0):
     T = T0*param_temperature**k
     return(T)
     
-def energy(sol, matAdjCom, matAdjCap, poids_com):
+def energy(coords_pts, matAdjCom, matAdjCap, capteurs_total):
     """score associe a la solution sol"""
-    capteurs = sol[1]
-    penalite_com = np.sum(matAdjCom[np.array(capteurs)])
-    E = len(capteurs) - poids_com*penalite_com
-    return(E)
+    #capteurs = sol[1]
+    #penalite_com = np.sum(matAdjCom[np.array(capteurs)])
+    #E = len(capteurs) - poids_com*penalite_com
+    return(len(capteurs_total))
     
 def P(E1, E2, T):
     return(np.exp((E2-E1)/T))
@@ -62,36 +72,44 @@ def recuit_simule(input_reseau, Rcom, Rcapt):
     T0 = 100
     nb_affichage = 100
     
-    coords_pts, mat_dist, matAdjCom, matAdjCap, capteurs_choisis = generation_sol_initiale(input_reseau, Rcom, Rcapt)
-    tool_box.trace(coords_pts, capteurs_choisis, Rcom, matAdjCap)
+    coords_pts, mat_dist, matAdjCom, matAdjCap, capteurs = generation_sol_initiale(input_reseau, Rcom, Rcapt)
+    #tool_box.trace(coords_pts, capteurs, Rcom, matAdjCap)
 
-    """
-    
-    energie_courante = energy(sol_courante, matAdjCom, matAdjCap, poids_com)
-    meilleure_solution = sol_courante
-    
+    energie_courante = energy(coords_pts, matAdjCom, matAdjCap, capteurs)
+    meilleurs_capteurs = capteurs
+    capteurs_courant = capteurs
+    meilleurs_energie = energie_courante
+    print("Longueur initiale " + str(len(capteurs)))
     for k in range(Kmax):
         T = temperature(k, param_temperature, T0)
-        sol_voisin = generation_voisin(sol_courante)
-        energie_voisin = energy(sol_voisin, matAdjCom, matAdjCap, poids_com)
-        if energie_voisin < energie_courante:
-            sol_courante = sol_voisin
-            meilleure_solution = sol_courante
+        capteurs_voisin, capteurs_connexe = generation_voisin(coords_pts, mat_dist, matAdjCom, matAdjCap, capteurs_courant, Rcom, Rcapt, k)
+        energie_voisin = energy(coords_pts, matAdjCom, matAdjCap, capteurs_connexe)
+        print(len(capteurs_connexe))
+        # Gestion de la solution courante
+        if energie_voisin <= energie_courante:
+            capteurs_courant = capteurs_voisin
+            energie_courante = energie_voisin
+
         else:
-            if P(energie_courante, energie_voisin, T) > rd.random(1):
-                sol_courante = sol_voisin
+            if P(energie_courante, energie_voisin, T) > rd.random():
+                capteurs_courant = capteurs_voisin
+                energie_courante = energie_voisin
         
-        if k%nb_affichage == 0:
-            trace(meilleure_solution[0], meilleure_solution[1], matAdjCom, matAdjCap)
+        # Gestion de la meilleure solution
+        if energie_courante < meilleurs_energie:
+            meilleurs_capteurs = capteurs_courant
+            meilleurs_energie = energie_courante
+        #if k%nb_affichage == 0:
+        #    trace(meilleure_solution[0], meilleure_solution[1], matAdjCom, matAdjCap)
     
-    return meilleure_solution
-    """
+    return len(meilleurs_capteurs)
+    
 if True:
     
     input_reseau = 'Instances\captANOR225_9_20.dat'
-    #input_reseau = 6
+    #input_reseau = 10
 
-    Rcom = 2
+    Rcom = 1
     Rcapt = 1
     
-    recuit_simule(input_reseau, Rcom, Rcapt)
+    print("Longueur optimale ",recuit_simule(input_reseau, Rcom, Rcapt))
