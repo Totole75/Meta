@@ -1,2 +1,2 @@
 # Meta
-Metaheuristique sur le placement de capteurs en milieu hostil
+Metaheuristique sur le placement de capteurs en milieu hostile
