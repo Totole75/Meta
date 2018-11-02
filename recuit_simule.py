@@ -10,14 +10,14 @@ import random as rd
 import tool_box
 import time
 import projet
-import meta
+import copy
 
 def generation_voisin(coords_pts, mat_dist, matAdjCom, matAdjCap, capteurs, Rcom, Rcapt, k):
     capteurs_voisin = projet.removeK(k, capteurs)
     
     capteurs_voisin = projet.algoGloutonReseau(coords_pts, matAdjCom, matAdjCap, capteurs_voisin)
 
-    capteurs_connexe = meta.reconstruction(coords_pts, mat_dist, capteurs_voisin, matAdjCom, Rcom)
+    capteurs_connexe = tool_box.reconstruction(coords_pts, mat_dist, capteurs_voisin, matAdjCom, Rcom)
     
     capteurs_connexe = projet.removeConnexe(capteurs_connexe, coords_pts, matAdjCom, matAdjCap)
     
@@ -25,7 +25,7 @@ def generation_voisin(coords_pts, mat_dist, matAdjCom, matAdjCap, capteurs, Rcom
     
 def generation_sol_initiale(input_reseau, Rcom, Rcapt):
     ## Parameters
-    tp_lim_sec = 1*60 #en secondes
+    tp_lim_sec = 1*5 #en secondes
     
     if type(input_reseau) == int:
         #alors on veut une grille
@@ -76,29 +76,31 @@ def recuit_simule(input_reseau, Rcom, Rcapt):
     #tool_box.trace(coords_pts, capteurs, Rcom, matAdjCap)
 
     energie_courante = energy(coords_pts, matAdjCom, matAdjCap, capteurs)
-    meilleurs_capteurs = capteurs
-    capteurs_courant = capteurs
-    meilleurs_energie = energie_courante
+    meilleurs_energie = copy.deepcopy(energie_courante)
+    meilleurs_capteurs = copy.deepcopy(capteurs)
+    capteurs_courant = copy.deepcopy(capteurs)
+    
     print("Longueur initiale " + str(len(capteurs)))
     for k in range(Kmax):
         T = temperature(k, param_temperature, T0)
         capteurs_voisin, capteurs_connexe = generation_voisin(coords_pts, mat_dist, matAdjCom, matAdjCap, capteurs_courant, Rcom, Rcapt, k)
         energie_voisin = energy(coords_pts, matAdjCom, matAdjCap, capteurs_connexe)
-        print(len(capteurs_connexe))
+                
         # Gestion de la solution courante
-        if energie_voisin <= energie_courante:
-            capteurs_courant = capteurs_voisin
-            energie_courante = energie_voisin
+        if energie_voisin < energie_courante:
+            capteurs_courant = copy.deepcopy(capteurs_voisin)
+            energie_courante = copy.deepcopy(energie_voisin)
 
         else:
             if P(energie_courante, energie_voisin, T) > rd.random():
-                capteurs_courant = capteurs_voisin
-                energie_courante = energie_voisin
+                capteurs_courant = copy.deepcopy(capteurs_voisin)
+                energie_courante = copy.deepcopy(energie_voisin)
         
         # Gestion de la meilleure solution
-        if energie_courante < meilleurs_energie:
-            meilleurs_capteurs = capteurs_courant
-            meilleurs_energie = energie_courante
+        if energie_voisin < meilleurs_energie:
+            meilleurs_capteurs = copy.deepcopy(capteurs_connexe)
+            meilleurs_energie = copy.deepcopy(energie_voisin)
+            
         #if k%nb_affichage == 0:
         #    trace(meilleure_solution[0], meilleure_solution[1], matAdjCom, matAdjCap)
     

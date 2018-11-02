@@ -10,6 +10,8 @@ import random
 import time
 import matplotlib.pyplot as plt
 from sklearn.metrics.pairwise import pairwise_distances
+from scipy.sparse import csr_matrix
+from scipy.sparse.csgraph import minimum_spanning_tree
 
 def read_data(file_path):
     """Lit les données du file_path"""
@@ -52,8 +54,75 @@ def compute_square_grid(n):
     coords_pts = [(i,j) for i in range(n) for j in range(n)]
     return np.array(coords_pts), pairwise_distances(coords_pts)
 
+def reconstruction(coords_pts, dist, capteurs, matAdjCom, Rcom):
+    matCsr = csr_matrix(matrice_csr(dist[capteurs,:][:,capteurs], Rcom))
+    Tcsr = minimum_spanning_tree(matCsr).toarray().astype(int)
+    Tcsr_compl = Tcsr + Tcsr.transpose()
+    
+    X, Y = np.where(Tcsr > 100)
+    
+    if type(capteurs) != type([]):
+        capteurs_fixed = capteurs.tolist()
+    else:
+        capteurs_fixed = capteurs
+        
+    for i in range(len(X)):
+        X0 = capteurs[X[i]]
+        Y0 = capteurs[Y[i]]
+        connexite = False
+        k=0
+        new_capteurs = []
+        while connexite == False and k<3:
+            
+            # indice des points qui sont dans le cercle de Rcom de X[i]
+            indexes_X = np.where(matAdjCom[X0,:] == 1)[0]
+            
+            indexes_Y = np.where(matAdjCom[Y0,:] == 1)[0]
+            
+            commonalities = set(indexes_X) - (set(indexes_X) - set(indexes_Y))
+            if len(commonalities) != 0:
+                if len(new_capteurs) != 0:
+                    for i in new_capteurs:
+                        capteurs_fixed.append(i)
+                capteurs_fixed.append(commonalities.pop())
+                connexite = True
+                break
+            
+            X0 = indexes_X[np.argmin(dist[indexes_X,Y0])]
+            Y0 = indexes_Y[np.argmin(dist[indexes_Y,X0])]
+            
+            new_capteurs.append(X0)
+            new_capteurs.append(Y0)
+            
+            k+=1
+    
+    #tool_box.trace(coords_pts[capteurs,:], range(len(capteurs)), Rcom, Tcsr)
+    
+    #matCsr = csr_matrix(matrice_csr(dist[capteurs_fixed,:][:,capteurs_fixed], Rcom))
+    #Tcsr = minimum_spanning_tree(matCsr).toarray().astype(int)
+    
+    #Tcsr_compl = Tcsr + Tcsr.transpose()
+    
+    #tool_box.trace(coords_pts[capteurs_fixed,:], range(len(capteurs_fixed)), Rcom, Tcsr)
+    
+    return(capteurs_fixed)
+    
+def matrice_csr(distance_matrix, rcom):
+    n = distance_matrix.shape[0]
+    
+    matAdjCom_seuil = np.zeros((n, n))
+    
+    for i in range(n):
+        for j in range(i+1,n):
+            d = distance_matrix[i, j]
+            if(d <= rcom):
+                matAdjCom_seuil[i, j] = d 
+            else:
+                matAdjCom_seuil[i, j] = 100 + d
+                
+    return matAdjCom_seuil
 
-def trace(coords_pts, capteurs, Rcom, matAdjCap, ):
+def trace(coords_pts, capteurs, Rcom, matAdjCap):
     """Trace sur une grid les points en bleu et les capteurs en rouge"""
     
     n2 = matAdjCap.shape[0]
@@ -75,7 +144,7 @@ def trace(coords_pts, capteurs, Rcom, matAdjCap, ):
     c = []
     for i in range(len(capteurs)):
         #plt.Circle((coords_pts[capteurs[i],0]+1, coords_pts[capteurs[i],1]+1), 10, color='b')
-        c.append(plt.Circle((coords_pts[capteurs[i],0], coords_pts[capteurs[i],1]), 1, color='b'))
+        c.append(plt.Circle((coords_pts[capteurs[i],0], coords_pts[capteurs[i],1]), Rcom, color='b'))
     fig, ax = plt.subplots()
     for i in c:
         ax.add_artist(i)
