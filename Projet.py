@@ -402,10 +402,11 @@ def voisinagePasConnexe(k, capteurs, coord_nodes, matCom, matCap, matDist, rcom)
 #    print("Removed", len(capteurs))
     capteurs = algoGloutonReseau(coord_nodes, matCom, matCap, capteurs)
 
-    capteurs = meta.reconstruction(coord_nodes, matDist, capteurs, matCom, rcom)
-#    print("Complete", len(capteurs))
+    capteurs = meta.reconstruction(coord_nodes, matDist, capteurs, matCom)
+#    a = len(capteurs)
 
     capteurs = removeConnexe(capteurs, coord_nodes, matCom, matCap)
+#    b = len(capteurs)
     
     return capteurs
 
@@ -609,7 +610,7 @@ def algoVoisinageGloutonReseauPasConnexe(path, k, p, rcom, rcapt):
         
     tool_box.trace(nodes, minCapteurs, rcom, matAdjCap)
     
-    return minCapteurs
+    return len(minCapteurs)
 
 def algoVoisinageGloutonReseau(path, k, p, rcom, rcapt):
     start = time.time()
@@ -737,12 +738,14 @@ def testConnexite(capteurs, matCom):
     return True
 
 
-#algoVoisinageGloutonGrillePasConnexe(10, 20, 100, 1, 1)
+algoVoisinageGloutonGrillePasConnexe(10, 30, 100, 1, 1)
     
     
 #gloutonReseau(50, "/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 1, 1)
+#print(algoVoisinageGloutonReseauPasConnexe("/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 30, 30, 1, 1))
 
-algoVoisinageGloutonReseauPasConnexe("/Users/victorchomel/Documents/Cours/MPRO/MH/Meta/Instances/captANOR225_9_20.dat", 10, 50, 2, 3)
+
+
 
 #algoVoisinageGloutonGrille(5, 2, 3, 2, 1)
 
